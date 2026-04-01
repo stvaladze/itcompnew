@@ -1,10 +1,15 @@
 package com.itcomp.app;
 
 import com.itcomp.model.employee.Employee;
+import com.itcomp.logger.AppLogger;
 
 import java.util.List;
+import java.util.logging.Logger;
 
 public class EmployeeStreamDemo {
+
+    private static final Logger logger =
+            AppLogger.getLogger(EmployeeStreamDemo.class);
 
     public static void processEmployees(List<Employee> employees) {
 
@@ -18,6 +23,6 @@ public class EmployeeStreamDemo {
                         " | Salary: " + e.getSalary() +
                         " | Role: " + e.getAccess())
 
-                .forEach(System.out::println);
+                .forEach(logger::info);
     }
 }
