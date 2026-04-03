@@ -11,10 +11,11 @@ public class ConnectionPool {
     private static ConnectionPool instance;
 
     private ConnectionPool() {
-        connections = new LinkedBlockingQueue<>();
+        connections = new LinkedBlockingQueue<>(POOL_SIZE);
+
 
         for (int i = 0; i < POOL_SIZE; i++) {
-            connections.add(new AppConnection(i));
+            connections.offer(new AppConnection(i));
         }
     }
 
@@ -25,11 +26,14 @@ public class ConnectionPool {
         return instance;
     }
 
+
     public AppConnection getConnection() throws InterruptedException {
-        return connections.take(); // thread-safe
+        return connections.take();
     }
 
     public void releaseConnection(AppConnection connection) {
-        connections.offer(connection);
+        if (connection != null) {
+            connections.offer(connection);
+        }
     }
 }
