@@ -46,21 +46,33 @@ public class Main {
 
 
         ConnectionPool pool = ConnectionPool.getInstance();
-        AppConnection connection = null;
+        Runnable task = () -> {
+            AppConnection connection = null;
 
-        try {
-            connection = pool.getConnection();
-            logger.info("Connection acquired: " + connection.getId());
-        } catch (Exception e) {
-            logger.severe("Connection error: " + e.getMessage());
-        } finally {
-            if (connection != null) {
-                pool.releaseConnection(connection);
-                logger.info("Connection released");
+            try {
+                connection = pool.getConnection();
+
+                logger.info("Thread " + Thread.currentThread().getName()
+                        + " acquired connection: " + connection.getId());
+
+                // simulate work
+                Thread.sleep(1000);
+
+            } catch (InterruptedException e) {
+                logger.severe("Error: " + e.getMessage());
+            } finally {
+                if (connection != null) {
+                    pool.releaseConnection(connection);
+
+                    logger.info("Thread " + Thread.currentThread().getName()
+                            + " released connection: " + connection.getId());
+                }
             }
-        }
+        };
 
-        AccessRole role = AccessRole.ADMIN;
-        logger.info("Role: " + role);
+        for (int i = 0; i < 10; i++) {
+            Thread thread = new Thread(task);
+            thread.start();
+        }
     }
 }
