@@ -1,16 +1,15 @@
 package com.itcomp.app;
 
+import com.itcomp.dao.EmployeeDAO;
+import com.itcomp.dao.impl.EmployeeJdbcDAO;
 import com.itcomp.logger.AppLogger;
-import com.itcomp.model.employee.Employee;
 import com.itcomp.model.employee.Developer;
-import com.itcomp.model.employee.Tester;
-import com.itcomp.enums.AccessRole;
+import com.itcomp.model.employee.Employee;
 import com.itcomp.pool.ConnectionPool;
-import com.itcomp.pool.AppConnection;
-import com.itcomp.parser.WordCounter;
 
+import java.sql.Connection;
 import java.util.List;
-import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.Optional;
 import java.util.logging.Logger;
 
 public class Main {
@@ -20,59 +19,74 @@ public class Main {
 
     public static void main(String[] args) {
 
-        try {
-            WordCounter.count("input.txt", "output.csv");
-        } catch (Exception e) {
-            logger.warning("WordCounter error: " + e.getMessage());
-        }
-
-        List<Employee> employees = new CopyOnWriteArrayList<>();
-
-        employees.add(new Developer(
-                "John", "Doe", "IT", "Germany", "Berlin",
-                1, 5000.0
-        ));
-
-        employees.add(new Tester(
-                "Anna", "Smith", "QA", "Germany", "Berlin",
-                2, 4000.0, "Automation", "Selenium"
-        ));
-
-        logger.info("=== Employees ===");
-
-        employees.forEach(e ->
-                logger.info(e.getName() + " | " + e.getSalary())
-        );
-
-
         ConnectionPool pool = ConnectionPool.getInstance();
-        Runnable task = () -> {
-            AppConnection connection = null;
+        Connection connection = null; // 🔥 must be outside try
 
-            try {
-                connection = pool.getConnection();
+        try {
 
-                logger.info("Thread " + Thread.currentThread().getName()
-                        + " acquired connection: " + connection.getId());
+            connection = pool.getConnection();
 
-                // simulate work
-                Thread.sleep(1000);
 
-            } catch (InterruptedException e) {
-                logger.severe("Error: " + e.getMessage());
-            } finally {
-                if (connection != null) {
-                    pool.releaseConnection(connection);
+            EmployeeDAO dao = new EmployeeJdbcDAO(connection);
 
-                    logger.info("Thread " + Thread.currentThread().getName()
-                            + " released connection: " + connection.getId());
-                }
+            logger.info("=== TEST DAO START ===");
+
+
+            Employee dev = new Developer(
+                    "Mike", "Ross", "IT", "USA", "NY",
+                    3, 7000.0
+            );
+
+            dao.save(dev);
+            logger.info("Saved employee: " + dev.getName());
+
+
+            List<Employee> employees = dao.findAll();
+            logger.info("=== ALL EMPLOYEES ===");
+            employees.forEach(e ->
+                    logger.info(e.getId() + " | " + e.getName() + " | " + e.getSalary())
+            );
+
+
+            Optional<Employee> found = dao.findById(1);
+            found.ifPresent(e ->
+                    logger.info("Found by ID: " + e.getName())
+            );
+
+
+            Optional<Employee> byName = dao.findByName("Mike");
+            byName.ifPresent(e ->
+                    logger.info("Found by name: " + e.getName())
+            );
+
+
+            List<Employee> richEmployees = dao.findBySalaryGreaterThan(4500);
+            logger.info("=== HIGH SALARY EMPLOYEES ===");
+            richEmployees.forEach(e ->
+                    logger.info(e.getName() + " | " + e.getSalary())
+            );
+
+
+            if (found.isPresent()) {
+                Employee e = found.get();
+                e.setSalary(9999.0);
+                dao.update(e);
+                logger.info("Updated salary for: " + e.getName());
             }
-        };
 
-        for (int i = 0; i < 10; i++) {
-            Thread thread = new Thread(task);
-            thread.start();
+
+            dao.delete(3);
+            logger.info("Deleted employee with ID 3");
+
+            logger.info("=== TEST DAO END ===");
+
+        } catch (Exception e) {
+            logger.severe("Error: " + e.getMessage());
+        } finally {
+
+            if (connection != null) {
+                pool.releaseConnection(connection);
+            }
         }
     }
 }
