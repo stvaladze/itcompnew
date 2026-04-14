@@ -20,7 +20,7 @@ public class Main {
     public static void main(String[] args) {
 
         ConnectionPool pool = ConnectionPool.getInstance();
-        Connection connection = null; // 🔥 must be outside try
+        Connection connection = null;
 
         try {
 
